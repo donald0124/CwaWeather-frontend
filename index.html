@@ -14,9 +14,10 @@
             --bg-paper: #F2F0EB;    /* 生成色 - 紙張 */
             --ink-dark: #3F3931;    /* 墨色 - 文字 */
             --ink-light: #8E8B82;   /* 鈍色 - 次要文字 */
+            --rain-color: #6A7F8D;  /* 藍墨茶 - 降雨資訊專用色 */
             --map-base: #E0DCD5;    /* 素鼠 - 地圖底色 */
-            --map-active: #7A8F70;  /* 柳染 - 選中色 (低飽和綠) */
-            --accent-red: #B85948;  /* 弁柄色 - 重點 (印章感) */
+            --map-active: #7A8F70;  /* 柳染 - 選中色 */
+            --accent-red: #B85948;  /* 弁柄色 - 重點 */
             --border: #D1CEC5;
         }
 
@@ -28,25 +29,25 @@
         }
 
         body {
-            font-family: 'Shippori Mincho', serif; /* 日式明體 */
+            font-family: 'Shippori Mincho', serif;
             background-color: var(--bg-paper);
             color: var(--ink-dark);
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* 禁止滑動 */
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 模擬和紙紋理 */
             background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
         }
 
-        /* === 標題區 (直書) === */
+        /* === 標題區 (直書) === */ 
+        /* === 修改後的標題 CSS === */
         .title-area {
             position: absolute;
             top: 30px;
-            right: 25px;
-            writing-mode: vertical-rl; /* 直書模式 */
+            left: 25px; /* 1. 改到左邊 */
+            writing-mode: vertical-lr; /* 2. 直書模式改為：從左讀到右 */
             z-index: 10;
             letter-spacing: 0.3em;
             pointer-events: none;
@@ -56,74 +57,123 @@
             font-size: 1.8rem;
             font-weight: 600;
             color: var(--ink-dark);
-            border-right: 1px solid var(--ink-dark); /* 右側裝飾線 */
-            padding-right: 15px;
+            /* 因為改為從左到右，分隔線保留在右邊剛好可以隔開副標題 */
+            border-right: 1px solid var(--ink-dark); 
+            padding-right: 1px;
+            /* 為了美觀，可以加一點左邊距，避免太貼螢幕邊緣 */
+            margin-right: 3px; 
         }
 
         .sub-title {
             font-size: 0.9rem;
             color: var(--ink-light);
+            /* 調整邊距邏輯 */
+            margin-left: 0; 
             margin-right: 10px;
             margin-top: 10px;
         }
 
-        /* === 資訊顯示區 (左下角，不擋地圖) === */
+        /* === 資訊顯示區 (左下角) === */
         .info-panel {
             position: absolute;
-            bottom: 40px;
-            left: 30px;
+            bottom: 30px;
+            left: 25px;
             z-index: 20;
-            opacity: 0; /* 預設隱藏 */
+            opacity: 0;
             transition: opacity 0.8s ease;
-            max-width: 200px;
+            width: 280px; /* 加寬以容納降雨資訊 */
         }
 
         .info-panel.visible {
             opacity: 1;
         }
 
+        .city-header {
+            margin-bottom: 15px;
+        }
+
         .city-name {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 400;
-            margin-bottom: 5px;
             position: relative;
             display: inline-block;
         }
 
-        /* 紅色印章裝飾 */
         .city-name::after {
             content: '';
             position: absolute;
-            top: 0;
-            right: -15px;
-            width: 10px;
-            height: 10px;
+            top: 5px;
+            right: -12px;
+            width: 8px;
+            height: 8px;
             background: var(--accent-red);
             border-radius: 50%;
             opacity: 0.8;
         }
 
-        .weather-detail {
-            font-size: 1rem;
-            color: var(--ink-dark);
-            line-height: 1.8;
-            margin-top: 10px;
+        /* 3段預報列表 */
+        .forecast-list {
             border-top: 1px solid var(--border);
             padding-top: 10px;
         }
 
-        .temp-display {
-            font-size: 1.4rem;
-            margin-top: 5px;
+        .forecast-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0; /* 稍微增加垂直間距 */
+            border-bottom: 1px dashed rgba(209, 206, 197, 0.5);
+            font-size: 0.95rem;
+        }
+        
+        .forecast-item:last-child {
+            border-bottom: none;
         }
 
-        .meta-row {
-            font-size: 0.85rem;
+        /* 欄位寬度控制 */
+        .f-time {
             color: var(--ink-light);
-            margin-top: 5px;
+            font-size: 0.85rem;
+            width: 40px;
+            flex-shrink: 0;
         }
 
-        /* === 全版地圖 === */
+        .f-weather {
+            flex: 1; /* 佔據剩餘空間 */
+            text-align: left;
+            padding-right: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* 文字過長省略 */
+            font-size: 0.9rem;
+        }
+
+        .f-rain {
+            width: 55px;
+            text-align: right;
+            color: var(--rain-color);
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .f-temp {
+            width: 65px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--ink-dark);
+            flex-shrink: 0;
+        }
+
+        .f-icon {
+            font-size: 1.1rem;      /* 圖示稍微大一點 */
+            color: var(--ink-dark); /* 跟文字同色，保持水墨感 */
+            width: 30px;            /* 固定寬度，讓後面文字對齊 */
+            text-align: center;
+            margin-right: 5px;      /* 與文字保持距離 */
+        }
+
+
+        /* === 地圖 === */
         .map-container {
             width: 100%;
             height: 100%;
@@ -133,22 +183,21 @@
         }
 
         svg {
-            height: 100%; /* 讓地圖盡量大，留一點上下邊距 */
+            height: 100%; 
             width: 100%;
-            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.05)); /* 極淡的陰影 */
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.05));
         }
 
-        /* 地圖路徑樣式 */
         path {
             fill: var(--map-base);
-            stroke: #F9F7F2; /* 邊線用接近背景的色 */
+            stroke: #F9F7F2;
             stroke-width: 1.5;
             transition: all 0.4s ease;
             cursor: pointer;
         }
 
         path:hover {
-            fill: #C5C0B5; /* Hover 時稍微變深 */
+            fill: #C5C0B5;
         }
 
         path.active {
@@ -156,7 +205,6 @@
             stroke: var(--bg-paper);
         }
 
-        /* 離島文字標籤 (選擇性) */
         text {
             fill: var(--ink-light);
             font-size: 10px;
@@ -199,26 +247,24 @@
     </div>
 
     <div id="infoPanel" class="info-panel">
-        <div id="panelCity" class="city-name">--</div>
-        <div class="weather-detail">
-            <div id="panelWeather">請點選地圖</div>
-            <div class="temp-display"><span id="panelTemp">--</span>°C</div>
-            <div class="meta-row">
-                降雨 <span id="panelRain">--</span> | <span id="panelDesc">--</span>
-            </div>
+        <div class="city-header">
+            <div id="panelCity" class="city-name">--</div>
+        </div>
+        <div id="forecastList" class="forecast-list">
         </div>
     </div>
 
     <div class="map-container">
         <svg id="taiwanMap" viewBox="0 0 500 750" preserveAspectRatio="xMidYMid meet">
-            <path id="連江縣" d="M80 60 L100 50 L110 70 L90 80 Z" />
-            <text x="80" y="45">連江</text>
+            
+            <path id="連江縣" d="M150 60 L170 50 L180 70 L160 80 Z" />
+            <text x="150" y="45">連江</text>
 
-            <path id="金門縣" d="M40 350 L70 340 L80 370 L50 380 Z" />
-            <text x="40" y="335">金門</text>
+            <path id="金門縣" d="M160 100 L190 90 L200 110 L170 120 Z" />
+            <text x="170" y="85">金門</text>
 
-            <path id="澎湖縣" d="M80 450 L120 440 L130 480 L90 490 Z" />
-            <text x="90" y="510">澎湖</text>
+            <path id="澎湖縣" d="M170 200 L210 190 L220 230 L180 240 Z" />
+            <text x="180" y="185">澎湖</text>
 
             <path id="基隆市" d="M380 40 L395 35 L400 45 L390 50 Z" />
             <path id="臺北市" d="M360 55 L380 50 L390 65 L370 75 Z" />
@@ -227,18 +273,15 @@
             <path id="新竹市" d="M315 75 L325 75 L325 85 L315 85 Z" />
             <path id="新竹縣" d="M310 75 L330 70 L340 90 L320 95 Z" />
             <path id="苗栗縣" d="M300 85 L320 80 L330 110 L290 120 Z" />
-
             <path id="臺中市" d="M290 110 L330 100 L340 145 L280 155 Z" />
             <path id="彰化縣" d="M270 145 L290 140 L290 165 L270 165 Z" />
             <path id="南投縣" d="M300 145 L350 135 L340 200 L300 190 Z" />
             <path id="雲林縣" d="M260 165 L290 165 L290 190 L260 190 Z" />
-
             <path id="嘉義市" d="M280 195 L290 195 L290 205 L280 205 Z" />
             <path id="嘉義縣" d="M260 190 L300 190 L300 220 L260 210 Z" />
             <path id="臺南市" d="M250 210 L290 210 L280 250 L240 240 Z" />
             <path id="高雄市" d="M250 240 L300 230 L310 295 L260 295 Z" />
             <path id="屏東縣" d="M270 295 L310 295 L310 380 L290 410 L270 370 Z" />
-
             <path id="宜蘭縣" d="M380 65 L420 85 L400 120 L360 85 Z" />
             <path id="花蓮縣" d="M360 120 L400 120 L380 240 L340 200 Z" />
             <path id="臺東縣" d="M320 240 L360 240 L340 360 L310 295 Z" />
@@ -249,104 +292,150 @@
         const API_URL = "https://cwa-backend.zeabur.app/api/weather/all";
         let allWeatherData = {}; 
 
-        // 啟動時設定日期
         function setDate() {
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth() + 1;
             const date = now.getDate();
-            // 轉換成稍微日式的寫法
             document.getElementById('dateTag').innerText = `${year}年 ${month}月${date}日`;
+        }
+
+        function formatTimePeriod(startTime) {
+            const date = new Date(startTime);
+            const hour = date.getHours();
+            
+            if (hour >= 5 && hour < 11) return "早晨";
+            if (hour >= 11 && hour < 13) return "午間";
+            if (hour >= 13 && hour < 18) return "午後";
+            if (hour >= 18 && hour < 23) return "夜間";
+            return "深夜";
         }
 
         async function init() {
             setDate();
             try {
-                // 模擬讀取氛圍
-                await new Promise(r => setTimeout(r, 1200));
+                await new Promise(r => setTimeout(r, 1000)); 
 
                 const response = await fetch(API_URL);
                 const json = await response.json();
 
                 if (json.success) {
-                    // 建立對照表
                     json.data.locations.forEach(location => {
                         allWeatherData[location.city] = location;
                     });
                     
-                    // 淡出 Loading
                     const loading = document.getElementById('loading');
                     loading.style.opacity = '0';
                     setTimeout(() => loading.style.display = 'none', 500);
 
-                    // 綁定互動
                     bindInteractions();
+
+                    // 預設顯示台北
+                    const defaultCity = "臺北市";
+                    const taipeiPath = document.getElementById(defaultCity);
+                    if (taipeiPath) {
+                        taipeiPath.classList.add('active'); 
+                        showWeatherInfo(defaultCity);       
+                    }
                 }
             } catch (error) {
                 console.error(error);
-                document.querySelector('.loading-text').innerText = "連線異常";
+                document.querySelector('.loading-text').innerText = "訊號中斷";
             }
         }
 
         function bindInteractions() {
             const paths = document.querySelectorAll('path');
-            const panel = document.getElementById('infoPanel');
 
             paths.forEach(path => {
                 path.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const cityName = path.id;
 
-                    // 1. 視覺狀態更新
                     paths.forEach(p => p.classList.remove('active'));
                     path.classList.add('active');
 
-                    // 2. 顯示資訊
                     showWeatherInfo(cityName);
                 });
             });
+        }
 
-            // 點擊背景重置
-            document.addEventListener('click', (e) => {
-                if(e.target.tagName !== 'path') {
-                    paths.forEach(p => p.classList.remove('active'));
-                    panel.classList.remove('visible');
-                }
-            });
+        // 取得天氣對應的多樣化 Emoji
+        function getWeatherIcon(weather) {
+            // 1. 特殊/劇烈天氣 (優先判斷)
+            if (weather.includes("雪")) return "🌨️"; 
+            if (weather.includes("雷")) return "⛈️"; // 雷雨/雷陣雨
+
+            // 2. 雨天系 (區分有沒有太陽)
+            if (weather.includes("雨")) {
+                // 如果同時有 "晴" 又有 "雨" (例如: 晴午後短暫雨)，用太陽雨圖示
+                if (weather.includes("晴")) return "🌦️"; 
+                // 如果是大雨或單純下雨
+                return "🌧️"; 
+            }
+
+            // 3. 雲系 (區分陰晴)
+            // "晴時多雲" (太陽為主)
+            if (weather.includes("晴") && weather.includes("多雲")) return "🌤️";
+            
+            // "多雲時晴" (雲為主，偶爾有陽光)
+            if (weather.includes("多雲") && weather.includes("晴")) return "⛅";
+            
+            // "陰" (完全沒太陽)
+            if (weather.includes("陰")) return "☁️";
+            
+            // 單純 "多雲" (比陰天好一點，但雲多)
+            if (weather.includes("雲")) return "🌥️";
+
+            // 4. 晴天系
+            if (weather.includes("晴")) return "☀️";
+
+            // 5. 預設 (找不到對應時)
+            return "☁️";
         }
 
         function showWeatherInfo(city) {
             const data = allWeatherData[city];
             if (!data) return;
 
-            const current = data.forecasts[0];
-            const panel = document.getElementById('infoPanel');
-            
-            // 填入資料
             document.getElementById('panelCity').innerText = city;
-            document.getElementById('panelWeather').innerText = current.weather;
             
-            // 計算平均溫
-            const avgTemp = Math.round((parseInt(current.minTemp) + parseInt(current.maxTemp)) / 2);
-            document.getElementById('panelTemp').innerText = avgTemp;
-            
-            document.getElementById('panelRain').innerText = current.rain;
-            
-            // 簡單的舒適度或體感描述轉換
-            let desc = "舒適";
-            if(current.weather.includes("雨")) desc = "帶傘";
-            if(parseInt(current.maxTemp) > 28) desc = "炎熱";
-            if(parseInt(current.minTemp) < 18) desc = "涼意";
-            
-            document.getElementById('panelDesc').innerText = desc;
+            const list = document.getElementById('forecastList');
+            list.innerHTML = '';
 
-            // 顯示面板 (Fade In)
-            panel.classList.add('visible');
+            data.forecasts.forEach((f, index) => {
+                // 1. 時間標籤
+                let timeLabel = formatTimePeriod(f.startTime);
+                if (index === 0) timeLabel = "今日";
+                else if (index === 1) timeLabel = "稍後";
+                else if (index === 2) timeLabel = "明日";
+
+                // 2. 天氣簡稱
+                let weatherShort = f.weather;
+                weatherShort = weatherShort.replace("午後", "");
+                if(weatherShort.length > 5) weatherShort = weatherShort.substring(0, 5);
+
+                // 3. 取得圖示 (新增這行)
+                const weatherIcon = getWeatherIcon(f.weather);
+
+                const item = document.createElement('div');
+                item.className = 'forecast-item';
+                
+                // 4. 更新 HTML：加入 f-icon span
+                item.innerHTML = `
+                    <span class="f-time">${timeLabel}</span>
+                    <span class="f-icon">${weatherIcon}</span> 
+                    <span class="f-weather">${weatherShort}</span>
+                    <span class="f-rain">☔${f.rain}</span>
+                    <span class="f-temp">${f.minTemp}-${f.maxTemp}°</span>
+                `;
+                list.appendChild(item);
+            });
+
+            document.getElementById('infoPanel').classList.add('visible');
         }
 
-        // 開始
         init();
-
     </script>
 </body>
 </html>
