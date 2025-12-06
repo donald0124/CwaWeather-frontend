@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Google 天氣</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Google Core Colors */
+            --g-blue: #4285F4;
+            --g-red: #EA4335;
+            --g-yellow: #FBBC05;
+            --g-green: #34A853;
+            --g-gray: #F1F3F4;
+            --g-text: #202124;
+            --g-subtext: #5F6368;
+            --card-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #FFFFFF;
+            color: var(--g-text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 防止捲動，專注於地圖體驗 */
+        }
+
+        /* === 頂部導航欄 (Google Style) === */
+        .navbar {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: white;
+            box-shadow: 0 1px 0 #dadce0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: var(--g-subtext);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo span:first-child {
+            font-weight: bold;
+        }
+        
+        .g-logo { display: flex; gap: 2px; }
+        .c-b { color: var(--g-blue); }
+        .c-r { color: var(--g-red); }
+        .c-y { color: var(--g-yellow); }
+        .c-g { color: var(--g-green); }
+
+        /* === 地圖容器 === */
+        .map-container {
+            flex: 1;
+            position: relative;
+            background-color: #DAE4F3; /* Google Maps 海洋藍 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* SVG 地圖樣式 */
+        #taiwanMap {
+            height: 90%;
+            max-width: 100%;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+            shape-rendering: crisp-edges;
+        }
+
+        /* 地區路徑樣式 */
+        path {
+            fill: #FFFFFF;
+            /*stroke: #DADCE0;
+            stroke-width: 1;*/
+            stroke-width: 2px; /* 加粗邊線 */
+            stroke: #ffffff;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        /* 像 Pixel 風格的 Hover 效果 */
+        path:hover {
+            fill: var(--g-blue);
+            transform: scale(1.02); /* 微微浮起 */
+        }
+
+        path.active {
+            fill: var(--g-red);
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        /* === 浮動天氣卡片 (Google Now Style) === */
+        .weather-card-modal {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120%); /* 預設隱藏在下方 */
+            width: 90%;
+            max-width: 400px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 24px;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 50;
+        }
+
+        .weather-card-modal.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 20px;
+        }
+
+        .location-name {
+            font-size: 1.8rem;
+            font-weight: 400;
+        }
+
+        .current-temp {
+            font-size: 4rem;
+            font-weight: 300;
+            line-height: 1;
+        }
+
+        .weather-desc {
+            font-size: 1.2rem;
+            color: var(--g-subtext);
+            margin-bottom: 20px;
+        }
+
+        .meta-info {
+            display: flex;
+            gap: 15px;
+            color: var(--g-subtext);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        /* 預報列表 */
+        .forecast-row {
+            display: flex;
+            overflow-x: auto;
+            gap: 16px;
+            padding-bottom: 5px;
+            border-top: 1px solid #F1F3F4;
+            padding-top: 15px;
+        }
+
+        .forecast-item {
+            min-width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .f-time { font-size: 0.8rem; color: var(--g-subtext); font-weight: bold; }
+        .f-icon { font-size: 1.5rem; }
+        .f-temp { font-size: 0.9rem; font-weight: 500; }
+
+        /* Loading */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--g-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 提示字 */
+        .tap-hint {
+            position: absolute;
+            top: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        <div class="logo">
+            <div class="g-logo">
+                <span class="c-b">G</span>
+                <span class="c-r">o</span>
+                <span class="c-y">o</span>
+                <span class="c-g">g</span>
+                <span class="c-b">l</span>
+                <span class="c-r">e</span>
+            </div>
+            <span>天氣</span>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div class="tap-hint">👆 點擊地圖查看天氣</div>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div style="margin-top:10px; font-size:0.9rem;">載入全台資訊...</div>
+        </div>
+
+        <svg id="taiwanMap" viewBox="0 0 400 600" style="display:none;">
+            <path id="基隆市" d="M280 40 L290 35 L295 45 L285 50 Z" />
+            <path id="臺北市" d="M260 50 L280 45 L290 60 L270 70 Z" />
+            <path id="新北市" d="M250 40 L260 50 L270 70 L290 60 L300 80 L240 60 Z" />
+            
+            <path id="桃園市" d="M230 50 L250 40 L240 60 L220 70 Z" />
+            <path id="新竹市" d="M215 70 L225 70 L225 80 L215 80 Z" />
+            <path id="新竹縣" d="M210 70 L230 65 L240 85 L220 90 Z" />
+            <path id="苗栗縣" d="M200 80 L220 75 L230 100 L190 110 Z" />
+            
+            <path id="臺中市" d="M190 100 L230 90 L240 130 L180 140 Z" />
+            <path id="彰化縣" d="M170 130 L190 125 L190 150 L170 150 Z" />
+            <path id="南投縣" d="M200 130 L250 120 L240 180 L200 170 Z" />
+            
+            <path id="雲林縣" d="M160 150 L190 150 L190 170 L160 170 Z" />
+            <path id="嘉義市" d="M180 175 L190 175 L190 185 L180 185 Z" />
+            <path id="嘉義縣" d="M160 170 L200 170 L200 200 L160 190 Z" />
+            
+            <path id="臺南市" d="M150 190 L190 190 L180 230 L140 220 Z" />
+            <path id="高雄市" d="M150 220 L200 210 L210 270 L160 270 Z" />
+            <path id="屏東縣" d="M170 270 L210 270 L210 350 L190 380 L170 340 Z" />
+            
+            <path id="宜蘭縣" d="M280 60 L320 80 L300 110 L260 80 Z" />
+            <path id="花蓮縣" d="M260 110 L300 110 L280 220 L240 180 Z" />
+            <path id="臺東縣" d="M220 220 L260 220 L240 330 L210 270 Z" />
+        </svg>
+    </div>
+
+    <div id="weatherCard" class="weather-card-modal">
+        <div class="card-header">
+            <div>
+                <h2 id="cardCity" class="location-name">--</h2>
+                <div id="cardDate" style="font-size: 0.9rem; color: #5F6368;">--</div>
+            </div>
+            <div id="cardIcon" style="font-size: 3rem;">⛅</div>
+        </div>
+        
+        <div class="current-temp"><span id="cardTemp">--</span>°</div>
+        <div id="cardWeather" class="weather-desc">--</div>
+
+        <div class="meta-info">
+            <span>💧 <span id="cardRain">--%</span></span>
+            <span>🌬️ <span id="cardComfort">--</span></span>
+        </div>
+
+        <div id="cardForecast" class="forecast-row">
+            </div>
+    </div>
+
+    <script>
+        // 設定你的 API 網址 (記得使用抓取 "全部" 的那個新 endpoint)
+        // 如果你的 API 有支援 CORS，請使用 http://localhost:3000/api/weather/all 測試
+        const API_URL = "https://cwa-backend.zeabur.app/api/weather/all"; 
+
+        // 全域變數儲存天氣資料
+        let allWeatherData = {}; 
+
+        // 1. 取得天氣資料
+        async function fetchAllWeather() {
+            try {
+                // 模擬延遲讓 Loading 轉一下
+                await new Promise(r => setTimeout(r, 1000));
+                
+                const response = await fetch(API_URL);
+                const json = await response.json();
+
+                if (json.success) {
+                    // 將資料轉換成 Key-Value 結構，方便用地名查詢
+                    // 結構: { "臺北市": { ... }, "高雄市": { ... } }
+                    json.data.locations.forEach(location => {
+                        allWeatherData[location.city] = location;
+                    });
+                    
+                    // 顯示地圖，隱藏 Loading
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('taiwanMap').style.display = 'block';
+                    
+                    // 初始化地圖點擊事件
+                    initMapInteractions();
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loading').innerHTML = "⚠️ 無法取得資料<br>請檢查 API";
+            }
+        }
+
+        // 2. 初始化地圖互動
+        function initMapInteractions() {
+            const paths = document.querySelectorAll('path');
+            
+            paths.forEach(path => {
+                path.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 防止冒泡到背景
+                    
+                    const cityName = path.id; // SVG path 的 ID 必須對應 API 的城市名稱
+                    
+                    // 視覺回饋：移除其他 active，設定當前 active
+                    paths.forEach(p => p.classList.remove('active'));
+                    path.classList.add('active');
+
+                    // 顯示該城市天氣
+                    showWeatherCard(cityName);
+                });
+            });
+
+            // 點擊地圖背景關閉卡片
+            document.querySelector('.map-container').addEventListener('click', () => {
+                document.getElementById('weatherCard').classList.remove('show');
+                paths.forEach(p => p.classList.remove('active'));
+            });
+        }
+
+        // 3. 渲染天氣卡片
+        function showWeatherCard(city) {
+            const data = allWeatherData[city];
+            if (!data) {
+                alert(`找不到 ${city} 的資料`);
+                return;
+            }
+
+            const current = data.forecasts[0];
+            const card = document.getElementById('weatherCard');
+
+            // 填入基本資料
+            document.getElementById('cardCity').textContent = city;
+            
+            // 日期處理
+            const date = new Date();
+            document.getElementById('cardDate').textContent = `${date.getMonth()+1}月${date.getDate()}日`;
+
+            // 溫度與天氣
+            const avgTemp = Math.round((parseInt(current.minTemp) + parseInt(current.maxTemp)) / 2);
+            document.getElementById('cardTemp').textContent = avgTemp;
+            document.getElementById('cardWeather').textContent = current.weather;
+            document.getElementById('cardRain').textContent = current.rain;
+            document.getElementById('cardComfort').textContent = current.comfort; // 舒適度
+
+            // Icon 處理 (簡易版)
+            let icon = "☁️";
+            if(current.weather.includes("晴")) icon = "☀️";
+            if(current.weather.includes("雨")) icon = "🌧️";
+            if(current.weather.includes("雷")) icon = "⛈️";
+            document.getElementById('cardIcon').textContent = icon;
+
+            // 渲染未來預報 (下方橫軸)
+            const forecastContainer = document.getElementById('cardForecast');
+            forecastContainer.innerHTML = ''; // 清空
+
+            data.forecasts.forEach((f, index) => {
+                // 判斷時段
+                const startTime = new Date(f.startTime);
+                const hour = startTime.getHours();
+                let timeLabel = `${hour}時`;
+                if(index === 0) timeLabel = "現在";
+                else if (hour >= 18) timeLabel = "今晚";
+                else if (hour >= 6 && hour < 12) timeLabel = "明早";
+                else if (hour >= 12) timeLabel = "明午";
+
+                let fIcon = "☁️";
+                if(f.weather.includes("晴")) fIcon = "☀️";
+                else if(f.weather.includes("雨")) fIcon = "🌧️";
+
+                const html = `
+                    <div class="forecast-item">
+                        <span class="f-time">${timeLabel}</span>
+                        <span class="f-icon">${fIcon}</span>
+                        <span class="f-temp">${parseInt(f.maxTemp)}°</span>
+                    </div>
+                `;
+                forecastContainer.innerHTML += html;
+            });
+
+            // 顯示卡片動畫
+            card.classList.add('show');
+        }
+
+        // 啟動
+        fetchWeather = fetchAllWeather; // 相容舊命名
+        document.addEventListener("DOMContentLoaded", fetchAllWeather);
+
+    </script>
+</body>
+</html>
